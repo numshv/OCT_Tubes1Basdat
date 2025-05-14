@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS Orders(
     catatan VARCHAR(255) NOT NULL,
     waktu_pemesanan TIMESTAMP NOT NULL,
     kuantitas INT NOT NULL DEFAULT 1,
-    sku VARCHAR(255) -- bisa null kan yak
+    sku VARCHAR(255), -- bisa null kan yak
 
     FOREIGN KEY (id_alamat) REFERENCES Buyer(email),
     FOREIGN KEY (email) REFERENCES Alamat(id_alamat)
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS Seller(
     email VARCHAR(255) NOT NULL PRIMARY KEY,
     ktp VARCHAR(255) NOT NULL,
     foto_diri VARCHAR(255) NOT NULL,
-    is_verified BOOLEAN NOT NULL
+    is_verified BOOLEAN NOT NULL,
 
     FOREIGN KEY (email) REFERENCES User(email)
 )
