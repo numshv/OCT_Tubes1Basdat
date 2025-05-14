@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS Wishlist(
     email VARCHAR(255) NOT NULL,
     id_produk INT NOT NULL,
 
-    PRIMARY KEY(email, id_produk),
+    -- PRIMARY KEY(email, id_produk),
 
     FOREIGN KEY (email) REFERENCES Buyer(email),
     FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
@@ -128,14 +128,28 @@ CREATE TABLE IF NOT EXISTS VarianProduk(
 );
 
 CREATE TABLE IF NOT EXISTS InstTag(
-    sku VARCHAR(255) NOT NULL,
     id_produk INT NOT NULL,
-    nama_varian VARCHAR(255) NOT NULL,
-    harga INT NOT NULL,
-    stok INT NOT NULL,
+    tag VARCHAR(255) NOT NULL,
 
-    PRIMARY KEY (sku, id_produk),
+    -- PRIMARY KEY (tag, id_produk),
 
     FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
 );
 
+CREATE TABLE IF NOT EXISTS InstGambar(
+    id_produk INT NOT NULL,
+    gambar VARCHAR(255) NOT NULL,
+
+    -- PRIMARY KEY (gambar, id_produk),
+
+    FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
+);
+
+CREATE TABLE IF NOT EXISTS Seller(
+    email VARCHAR(255) NOT NULL PRIMARY KEY,
+    ktp VARCHAR(255) NOT NULL,
+    foto_diri VARCHAR(255) NOT NULL,
+    is_verified BOOLEAN NOT NULL
+
+    FOREIGN KEY (email) REFERENCES User(email)
+)
