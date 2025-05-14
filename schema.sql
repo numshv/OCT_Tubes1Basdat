@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS Pertemanan(
     email_friend VARCHAR(255) NOT NULL,
     PRIMARY KEY (email, email_friend),
 
-    FOREIGN KEY (email_friend) REFERENCES User(email),
-    FOREIGN KEY (email) REFERENCES User(email)
+    -- FOREIGN KEY (email_friend) REFERENCES User(email),
+    -- FOREIGN KEY (email) REFERENCES User(email)
 
     -- perlu pake on delete cascade on update cascade gk ya? apa gk boleh?
     -- both email sama email_friend better keduanya jadi PK atau tabel gk ada PK samsek?
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS InstProduk(
     id_order INT NOT NULL,
     id_produk INT NOT NULL,
 
-    PRIMARY KEY(id_order, id_produk),
+    -- PRIMARY KEY(id_order, id_produk),
 
     FOREIGN KEY (id_order) REFERENCES Orders(id_order),
     FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
