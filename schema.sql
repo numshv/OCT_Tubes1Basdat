@@ -7,21 +7,29 @@ CREATE TABLE IF NOT EXISTS User (
 
     password_hash VARCHAR(255) NOT NULL,
     nama_panjang VARCHAR(255) NOT NULL,
-    tanggal_lahir DATE, -- wajib apa kgk?
-    foto_profil VARCHAR(255), --wajib apa kgk?
+    tanggal_lahir DATE,
+    foto_profil VARCHAR(255),
     tipe ENUM('Buyer', 'Seller') DEFAULT 'Buyer'
 );
 
 CREATE TABLE IF NOT EXISTS Pertemanan(
     email VARCHAR(255) NOT NULL,
     email_friend VARCHAR(255) NOT NULL,
-    PRIMARY KEY (email, email_friend),
+    PRIMARY KEY (email, email_friend)
 
     -- FOREIGN KEY (email_friend) REFERENCES User(email),
     -- FOREIGN KEY (email) REFERENCES User(email)
-
     -- perlu pake on delete cascade on update cascade gk ya? apa gk boleh?
     -- both email sama email_friend better keduanya jadi PK atau tabel gk ada PK samsek?
+);
+
+CREATE TABLE IF NOT EXISTS Seller(
+    email VARCHAR(255) NOT NULL PRIMARY KEY,
+    ktp VARCHAR(255) NOT NULL,
+    foto_diri VARCHAR(255) NOT NULL,
+    is_verified BOOLEAN NOT NULL,
+
+    FOREIGN KEY (email) REFERENCES User(email)
 );
 
 CREATE TABLE IF NOT EXISTS InstTelp(
@@ -39,6 +47,27 @@ CREATE TABLE IF NOT EXISTS Buyer(
     FOREIGN KEY (email) REFERENCES User(email)
 );
 
+CREATE TABLE IF NOT EXISTS Produk(
+    id_produk INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    nama VARCHAR(255) NOT NULL,
+    deskripsi VARCHAR(255),
+    email VARCHAR(255) NOT NULL,
+
+    FOREIGN KEY (email) REFERENCES Seller(email)
+);
+
+CREATE TABLE IF NOT EXISTS VarianProduk(
+    sku VARCHAR(255) NOT NULL,
+    id_produk INT NOT NULL,
+    nama_varian VARCHAR(255) NOT NULL,
+    harga INT NOT NULL,
+    stok INT NOT NULL,
+
+    PRIMARY KEY (sku, id_produk),
+
+    FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
+);
+
 CREATE TABLE IF NOT EXISTS Keranjang(
     -- ini sementara, blm fix masalah PK
     email VARCHAR(255) NOT NULL,
@@ -51,7 +80,7 @@ CREATE TABLE IF NOT EXISTS Keranjang(
 
     FOREIGN KEY (email) REFERENCES Buyer(email),
     FOREIGN KEY (sku) REFERENCES VarianProduk(sku),
-    FOREIGN KEY (id_produk) REFERENCES Produk(id_produk) --masih sementara
+    FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
 );
 
 CREATE TABLE IF NOT EXISTS Wishlist(
@@ -86,10 +115,10 @@ CREATE TABLE IF NOT EXISTS Orders(
     catatan VARCHAR(255) NOT NULL,
     waktu_pemesanan TIMESTAMP NOT NULL,
     kuantitas INT NOT NULL DEFAULT 1,
-    sku VARCHAR(255), -- bisa null kan yak
+    sku VARCHAR(255),
 
-    FOREIGN KEY (id_alamat) REFERENCES Buyer(email),
-    FOREIGN KEY (email) REFERENCES Alamat(id_alamat)
+    FOREIGN KEY (id_alamat) REFERENCES Alamat(id_alamat),
+    FOREIGN KEY (email) REFERENCES Buyer(email)
 
     -- FK SKU?
 );
@@ -106,26 +135,6 @@ CREATE TABLE IF NOT EXISTS InstProduk(
     -- FK SKU?
 );
 
-CREATE TABLE IF NOT EXISTS Produk(
-    id_produk INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
-    nama VARCHAR(255) NOT NULL,
-    deskripsi VARCHAR(255), --not null or nah
-    email VARCHAR(255) NOT NULL,
-
-    FOREIGN KEY (email) REFERENCES VerifiedSeller(email)
-);
-
-CREATE TABLE IF NOT EXISTS VarianProduk(
-    sku VARCHAR(255) NOT NULL,
-    id_produk INT NOT NULL,
-    nama_varian VARCHAR(255) NOT NULL,
-    harga INT NOT NULL,
-    stok INT NOT NULL,
-
-    PRIMARY KEY (sku, id_produk),
-
-    FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
-);
 
 CREATE TABLE IF NOT EXISTS InstTag(
     id_produk INT NOT NULL,
@@ -144,12 +153,3 @@ CREATE TABLE IF NOT EXISTS InstGambar(
 
     FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
 );
-
-CREATE TABLE IF NOT EXISTS Seller(
-    email VARCHAR(255) NOT NULL PRIMARY KEY,
-    ktp VARCHAR(255) NOT NULL,
-    foto_diri VARCHAR(255) NOT NULL,
-    is_verified BOOLEAN NOT NULL,
-
-    FOREIGN KEY (email) REFERENCES User(email)
-)
