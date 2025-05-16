@@ -4,6 +4,9 @@ from faker import Faker
 from datetime import datetime, timedelta
 import random
 
+# TODO: benerin penamaan sku
+# TODO: id user auto increment
+
 # Inisialisasi Faker untuk bahasa Indonesia
 fake = Faker('id_ID')
 
@@ -13,8 +16,8 @@ def create_connection():
         connection = mysql.connector.connect(
             host='localhost',
             user='root',      
-            password='',      
-            database='bustbuy' 
+            password='n0um1sy1fa',      
+            database='bustbuy4' 
         )
         return connection
     except Error as e:
@@ -26,45 +29,79 @@ def generate_sku(id_produk, varian_num):
     """Generate SKU untuk varian produk"""
     return f"SKU-{id_produk:04d}-{varian_num:02d}"
 
-def seed_users(connection, count=50):
-    """Mengisi data User, Buyer, dan Seller"""
+def seed_users(connection):
+    """Mengisi data User sebanyak 100 user: 50 Seller dan 50 Buyer"""
     cursor = connection.cursor()
     
     users = []
-    buyers = []
-    sellers = []
+    total_seller = 50
+    total_buyer = 50
     
-    for i in range(count):
-        password_hash = fake.password()
+    # Buat 50 Seller terlebih dahulu
+    for i in range(total_seller):
         nama_panjang = fake.unique.name()
-        email = f"{nama_panjang}{random.randint(1,999)}@bustbuy.id"
+        email = f"{nama_panjang.split()[0].lower()}{random.randint(1,999)}@bustbuy.id"
+        password_hash = fake.password()
         tanggal_lahir = fake.date_of_birth(minimum_age=18, maximum_age=60)
-        foto_profil = f"profile_{i+1}.jpg"
-        tipe = "Seller" if i % 5 == 0 else "Buyer"  # 20% menjadi Seller
+        foto_profil = f"profile_seller_{i+1}.jpg"
+        tipe = "Seller"
         
         users.append((email, password_hash, nama_panjang, tanggal_lahir, foto_profil, tipe))
+    
+    # Buat 50 Buyer
+    for i in range(total_buyer):
+        nama_panjang = fake.unique.name()
+        email = f"{nama_panjang.split()[0].lower()}{random.randint(1,999)}@bustbuy.id"
+        password_hash = fake.password()
+        tanggal_lahir = fake.date_of_birth(minimum_age=18, maximum_age=60)
+        foto_profil = f"profile_buyer_{i+1}.jpg"
+        tipe = "Buyer"
         
-        if tipe == "Buyer":
-            buyers.append((email,))
-        else:
-            ktp = f"ktp_{i+1}.jpg"
-            foto_diri = f"selfie_{i+1}.jpg"
-            is_verified = random.choice([True, False])  # 50% verified
-            sellers.append((email, ktp, foto_diri, is_verified))
+        users.append((email, password_hash, nama_panjang, tanggal_lahir, foto_profil, tipe))
     
     try:
-        # Insert users
         cursor.executemany(
             """INSERT INTO User 
             (email, password_hash, nama_panjang, tanggal_lahir, foto_profil, tipe) 
             VALUES (%s, %s, %s, %s, %s, %s)""",
             users
         )
+        connection.commit()
+        print(f"✅ Berhasil menambahkan {len(users)} users: {total_seller} Sellers dan {total_buyer} Buyers")
+        return True
+    except Error as e:
+        connection.rollback()
+        print(f"❌ Error seeding users: {e}")
+        return False
+    finally:
+        cursor.close()
+
+
+def seed_buyers_and_sellers(connection):
+    """Mengisi data Buyer dan Seller berdasarkan User yang ada"""
+    cursor = connection.cursor()
+    
+    try:
+        # Ambil semua user dan tipe mereka
+        cursor.execute("SELECT id_user, tipe FROM User")
+        user_types = {row[0]: row[1] for row in cursor.fetchall()}
+        
+        buyers = []
+        sellers = []
+        
+        for id_user, tipe in user_types.items():
+            if tipe == "Buyer":
+                buyers.append((id_user,))
+            else:  # Seller
+                ktp = f"ktp_{id_user}.jpg"
+                foto_diri = f"selfie_{id_user}.jpg"
+                is_verified = random.choice([True, False])  # 50% verified
+                sellers.append((id_user, ktp, foto_diri, is_verified))
         
         # Insert buyers
         if buyers:
             cursor.executemany(
-                "INSERT INTO Buyer (email) VALUES (%s)",
+                "INSERT INTO Buyer (id_user) VALUES (%s)",
                 buyers
             )
         
@@ -72,16 +109,16 @@ def seed_users(connection, count=50):
         if sellers:
             cursor.executemany(
                 """INSERT INTO Seller 
-                (email, ktp, foto_diri, is_verified) 
+                (id_user, ktp, foto_diri, is_verified) 
                 VALUES (%s, %s, %s, %s)""",
                 sellers
             )
         
         connection.commit()
-        print(f"✅ Berhasil menambahkan {len(users)} users, {len(buyers)} buyers, dan {len(sellers)} sellers")
+        print(f"✅ Berhasil menambahkan {len(buyers)} buyers dan {len(sellers)} sellers")
     except Error as e:
         connection.rollback()
-        print(f"❌ Error seeding users: {e}")
+        print(f"❌ Error seeding buyers dan sellers: {e}")
     finally:
         cursor.close()
 
@@ -90,24 +127,24 @@ def seed_pertemanan(connection, max_friends=8):
     cursor = connection.cursor()
     
     try:
-        cursor.execute("SELECT email FROM User")
-        emails = [row[0] for row in cursor.fetchall()]
+        cursor.execute("SELECT id_user FROM User")
+        user_ids = [row[0] for row in cursor.fetchall()]
         
         pertemanan = set()  # Gunakan set untuk menghindari duplikat
         
-        for email in emails:
-            num_friends = random.randint(1, max_friends)
-            friends = random.sample(emails, num_friends)
+        for user_id in user_ids:
+            num_friends = random.randint(1, min(max_friends, len(user_ids)-1))
+            potential_friends = [uid for uid in user_ids if uid != user_id]
+            friends = random.sample(potential_friends, min(num_friends, len(potential_friends)))
             
-            for friend in friends:
-                if email != friend:
-                    # Pastikan tidak ada duplikat dengan urutan terbalik
-                    if (friend, email) not in pertemanan:
-                        pertemanan.add((email, friend))
+            for friend_id in friends:
+                # Pastikan tidak ada duplikat dengan urutan terbalik
+                if (friend_id, user_id) not in pertemanan:
+                    pertemanan.add((user_id, friend_id))
         
         if pertemanan:
             cursor.executemany(
-                "INSERT INTO Pertemanan (email, email_friend) VALUES (%s, %s)",
+                "INSERT INTO Pertemanan (id_user, id_user_teman) VALUES (%s, %s)",
                 list(pertemanan)
             )
             connection.commit()
@@ -123,20 +160,20 @@ def seed_inst_telp(connection, max_numbers=2):
     cursor = connection.cursor()
     
     try:
-        cursor.execute("SELECT email FROM User")
-        emails = [row[0] for row in cursor.fetchall()]
+        cursor.execute("SELECT id_user FROM User")
+        user_ids = [row[0] for row in cursor.fetchall()]
         
         inst_telp = []
         
-        for email in emails:
+        for user_id in user_ids:
             num_numbers = random.randint(1, max_numbers)
             for _ in range(num_numbers):
-                nomor_telpon = fake.phone_number()
-                inst_telp.append((email, nomor_telpon))
+                nomor_telpon = fake.phone_number()[:20]  # Batasi panjang sesuai schema
+                inst_telp.append((user_id, nomor_telpon))
         
         if inst_telp:
             cursor.executemany(
-                "INSERT INTO InstTelp (email, nomor_telpon) VALUES (%s, %s)",
+                "INSERT INTO InstTelp (id_user, nomor_telpon) VALUES (%s, %s)",
                 inst_telp
             )
             connection.commit()
@@ -152,8 +189,8 @@ def seed_alamat(connection, max_addresses=3):
     cursor = connection.cursor()
     
     try:
-        cursor.execute("SELECT email FROM Buyer")
-        buyer_emails = [row[0] for row in cursor.fetchall()]
+        cursor.execute("SELECT id_user FROM Buyer")
+        buyer_ids = [row[0] for row in cursor.fetchall()]
         
         alamat = []
         provinsi_kota = {
@@ -164,7 +201,7 @@ def seed_alamat(connection, max_addresses=3):
             'Banten': ['Tangerang', 'Serang', 'Cilegon', 'South Tangerang']
         }
         
-        for email in buyer_emails:
+        for user_id in buyer_ids:
             num_addresses = random.randint(1, max_addresses)
             for i in range(num_addresses):
                 provinsi = random.choice(list(provinsi_kota.keys()))
@@ -172,20 +209,25 @@ def seed_alamat(connection, max_addresses=3):
                 jalan = fake.street_address()
                 is_utama = (i == 0)  # Alamat pertama sebagai utama
                 
-                alamat.append((email, provinsi, kota, jalan, is_utama))
+                alamat.append((user_id, provinsi, kota, jalan, is_utama))
         
         if alamat:
             cursor.executemany(
                 """INSERT INTO Alamat 
-                (email, provinsi, kota, jalan, is_utama) 
+                (id_user, provinsi, kota, jalan, is_utama) 
                 VALUES (%s, %s, %s, %s, %s)""",
                 alamat
             )
             connection.commit()
             print(f"✅ Berhasil menambahkan {len(alamat)} alamat")
+        
+        # Return untuk digunakan di fungsi lain
+        cursor.execute("SELECT id_alamat, id_user FROM Alamat WHERE is_utama = TRUE")
+        return {row[1]: row[0] for row in cursor.fetchall()}  # Dict {user_id: alamat_utama_id}
     except Error as e:
         connection.rollback()
         print(f"❌ Error seeding alamat: {e}")
+        return {}
     finally:
         cursor.close()
 
@@ -194,14 +236,14 @@ def seed_produk_dan_varian(connection, count=100):
     cursor = connection.cursor()
     
     try:
-        cursor.execute("SELECT email FROM Seller WHERE is_verified = TRUE")
-        seller_emails = [row[0] for row in cursor.fetchall()]
+        cursor.execute("SELECT id_user FROM Seller WHERE is_verified = TRUE")
+        seller_ids = [row[0] for row in cursor.fetchall()]
         
-        if not seller_emails:
+        if not seller_ids:
             print("⚠ Tidak ada verified seller. Lewati seeding produk.")
-            return
+            return {}
         
-        produk = []
+        produk_ids = {}  # Untuk menyimpan id_produk yang dibuat
         varian_produk = []
         inst_tag = []
         inst_gambar = []
@@ -214,23 +256,22 @@ def seed_produk_dan_varian(connection, count=100):
         }
         
         for i in range(count):
-            email = random.choice(seller_emails)
+            id_seller = random.choice(seller_ids)
             kategori = random.choice(list(kategori_produk.keys()))
             subkategori = random.choice(kategori_produk[kategori])
             nama = f"{subkategori} {fake.word().capitalize()}"
             deskripsi = fake.sentence(nb_words=10)
             
-            produk.append((nama, deskripsi, email))
-        
-        # Insert produk dan dapatkan ID
-        for p in produk:
+            # Insert produk dan dapatkan ID
             cursor.execute(
                 """INSERT INTO Produk 
-                (nama, deskripsi, email) 
+                (nama, deskripsi, id_seller) 
                 VALUES (%s, %s, %s)""",
-                p
+                (nama, deskripsi, id_seller)
             )
+            
             product_id = cursor.lastrowid
+            produk_ids[product_id] = {"seller_id": id_seller}
             
             # Buat varian produk (1-3 varian per produk)
             num_variants = random.randint(1, 3)
@@ -241,9 +282,10 @@ def seed_produk_dan_varian(connection, count=100):
                 stok = random.randint(0, 100)
                 
                 varian_produk.append((sku, product_id, nama_varian, harga, stok))
+                produk_ids[product_id].setdefault("varians", []).append({"sku": sku, "stok": stok})
             
             # Tambahkan 1-3 tag
-            tags = random.sample(list(kategori_produk.keys()), random.randint(1, 3))
+            tags = random.sample(list(kategori_produk.keys()), min(random.randint(1, 3), len(kategori_produk)))
             for tag in tags:
                 inst_tag.append((product_id, tag))
             
@@ -277,90 +319,116 @@ def seed_produk_dan_varian(connection, count=100):
             )
         
         connection.commit()
-        print(f"✅ Berhasil menambahkan {len(produk)} produk, {len(varian_produk)} varian, {len(inst_tag)} tag, dan {len(inst_gambar)} gambar")
+        print(f"✅ Berhasil menambahkan {len(produk_ids)} produk, {len(varian_produk)} varian, {len(inst_tag)} tag, dan {len(inst_gambar)} gambar")
+        return produk_ids
     except Error as e:
         connection.rollback()
         print(f"❌ Error seeding produk: {e}")
+        return {}
     finally:
         cursor.close()
 
-def seed_keranjang_dan_wishlist(connection):
-    """Mengisi data keranjang dan wishlist"""
+def seed_keranjang_dan_wishlist(connection, produk_ids):
+    """Mengisi data keranjang dan wishlist dengan minimal 150 & 100 item"""
     cursor = connection.cursor()
-    
+
     try:
-        cursor.execute("SELECT email FROM Buyer")
-        buyer_emails = [row[0] for row in cursor.fetchall()]
-        
-        cursor.execute("SELECT sku, id_produk FROM VarianProduk")
-        varian_produk = [(row[0], row[1]) for row in cursor.fetchall()]
-        
+        cursor.execute("SELECT id_user FROM Buyer")
+        buyer_ids = [row[0] for row in cursor.fetchall()]
+
+        if not buyer_ids or not produk_ids:
+            print("⚠ Tidak ada data buyer atau produk. Lewati seeding keranjang dan wishlist.")
+            return
+
         keranjang = []
         wishlist = []
-        
-        for email in buyer_emails:
-            # Tambahkan 0-5 item ke keranjang
+        keranjang_set = set()
+        wishlist_set = set()
+
+        # Seed awal seperti biasa
+        for buyer_id in buyer_ids:
             num_cart_items = random.randint(0, 5)
-            if num_cart_items > 0 and varian_produk:
-                items = random.sample(varian_produk, min(num_cart_items, len(varian_produk)))
-                for sku, id_produk in items:
-                    kuantitas = random.randint(1, 5)
-                    keranjang.append((email, sku, id_produk, kuantitas))
-            
-            # Tambahkan 0-5 item ke wishlist (tidak duplikat dengan keranjang)
+            cart_product_ids = set()
+
+            if num_cart_items > 0:
+                product_choices = random.sample(list(produk_ids.keys()), min(num_cart_items, len(produk_ids)))
+                for product_id in product_choices:
+                    if "varians" in produk_ids[product_id] and produk_ids[product_id]["varians"]:
+                        varian = random.choice(produk_ids[product_id]["varians"])
+                        if varian["stok"] > 0:
+                            kuantitas = random.randint(1, min(5, varian["stok"]))
+                            key = (buyer_id, varian["sku"])
+                            if key not in keranjang_set:
+                                keranjang.append((buyer_id, varian["sku"], product_id, kuantitas))
+                                keranjang_set.add(key)
+                                cart_product_ids.add(product_id)
+
+            # Wishlist (tidak duplikat dengan keranjang)
             num_wishlist_items = random.randint(0, 5)
-            if num_wishlist_items > 0 and varian_produk:
-                available_items = [vp for vp in varian_produk 
-                                 if not any(item for item in keranjang 
-                                           if item[0] == email and item[2] == vp[1])]
-                if available_items:
-                    items = random.sample(available_items, min(num_wishlist_items, len(available_items)))
-                    for sku, id_produk in items:
-                        wishlist.append((email, id_produk))
-        
+            available_products = [pid for pid in produk_ids.keys() if pid not in cart_product_ids]
+            if num_wishlist_items > 0 and available_products:
+                wishlist_products = random.sample(available_products, min(num_wishlist_items, len(available_products)))
+                for product_id in wishlist_products:
+                    key = (buyer_id, product_id)
+                    if key not in wishlist_set:
+                        wishlist.append((buyer_id, product_id))
+                        wishlist_set.add(key)
+
+        # Jika belum mencapai jumlah minimal, tambah data ekstra secara acak
+        while len(keranjang) < 150:
+            buyer_id = random.choice(buyer_ids)
+            product_id = random.choice(list(produk_ids.keys()))
+            if "varians" in produk_ids[product_id] and produk_ids[product_id]["varians"]:
+                varian = random.choice(produk_ids[product_id]["varians"])
+                if varian["stok"] > 0:
+                    key = (buyer_id, varian["sku"])
+                    if key not in keranjang_set:
+                        kuantitas = random.randint(1, min(5, varian["stok"]))
+                        keranjang.append((buyer_id, varian["sku"], product_id, kuantitas))
+                        keranjang_set.add(key)
+
+        while len(wishlist) < 100:
+            buyer_id = random.choice(buyer_ids)
+            product_id = random.choice(list(produk_ids.keys()))
+            key = (buyer_id, product_id)
+            if key not in wishlist_set:
+                wishlist.append((buyer_id, product_id))
+                wishlist_set.add(key)
+
         # Insert keranjang
         if keranjang:
             cursor.executemany(
                 """INSERT INTO Keranjang 
-                (email, sku, id_produk, kuantitas) 
+                (id_user, sku, id_produk, kuantitas) 
                 VALUES (%s, %s, %s, %s)""",
                 keranjang
             )
-        
+
         # Insert wishlist
         if wishlist:
             cursor.executemany(
-                "INSERT INTO Wishlist (email, id_produk) VALUES (%s, %s)",
+                "INSERT INTO Wishlist (id_user, id_produk) VALUES (%s, %s)",
                 wishlist
             )
-        
+
         connection.commit()
         print(f"✅ Berhasil menambahkan {len(keranjang)} item keranjang dan {len(wishlist)} item wishlist")
+
     except Error as e:
         connection.rollback()
         print(f"❌ Error seeding keranjang dan wishlist: {e}")
+
     finally:
         cursor.close()
 
-def seed_orders(connection, count=200):
+
+def seed_orders(connection, produk_ids, alamat_utama, count=200):
     """Mengisi data orders"""
     cursor = connection.cursor()
     
     try:
-        # Ambil data buyer dan alamat utama mereka
-        cursor.execute("""
-            SELECT b.email, a.id_alamat 
-            FROM Buyer b
-            JOIN Alamat a ON b.email = a.email
-            WHERE a.is_utama = TRUE
-        """)
-        buyer_addresses = [(row[0], row[1]) for row in cursor.fetchall()]
-        
-        cursor.execute("SELECT sku, id_produk FROM VarianProduk")
-        varian_produk = [(row[0], row[1]) for row in cursor.fetchall()]
-        
-        if not buyer_addresses or not varian_produk:
-            print("⚠ Tidak cukup data untuk seeding orders. Diperlukan buyer dengan alamat dan varian produk.")
+        if not alamat_utama or not produk_ids:
+            print("⚠ Tidak cukup data untuk seeding orders. Diperlukan buyer dengan alamat dan produk.")
             return
         
         orders = []
@@ -373,50 +441,50 @@ def seed_orders(connection, count=200):
             'pesanan sampai', 
             'pesanan dibatalkan'
         ]
-        metode_pembayaran = ['Transfer Bank', 'Kartu Kredit', 'OVO', 'Gopay', 'Dana', 'COD']
-        metode_pengiriman = ['JNE', 'J&T', 'SiCepat', 'Ninja Express', 'AnterAja']
+        payment_methods = ['Transfer Bank', 'Kartu Kredit', 'OVO', 'Gopay', 'Dana', 'COD']
+        shipping_methods = ['JNE', 'J&T', 'SiCepat', 'Ninja Express', 'AnterAja']
         
-        for i in range(count):
-            email, id_alamat = random.choice(buyer_addresses)
+        # ID dari buyer yang memiliki alamat utama
+        buyer_ids = list(alamat_utama.keys())
+        
+        for _ in range(min(count, len(buyer_ids) * len(produk_ids))):
+            buyer_id = random.choice(buyer_ids)
+            id_alamat = alamat_utama[buyer_id]
+            
             status_order = random.choices(
                 status_options,
                 weights=[10, 20, 20, 40, 10]  # Lebih banyak pesanan yang sudah sampai
             )[0]
-            metode_pembayaran = random.choice(metode_pembayaran)
-            metode_pengiriman = random.choice(metode_pengiriman)
-            catatan = fake.sentence(nb_words=5) if random.random() > 0.7 else ""
+            metode_pembayaran = random.choice(payment_methods)
+            metode_pengiriman = random.choice(shipping_methods)
+            catatan = fake.sentence(nb_words=5) if random.random() > 0.7 else None
             
-            # Waktu pemesanan dalam 90 hari terakhir
-            waktu_pemesanan = fake.date_time_between(
-                start_date='-90d', 
-                end_date='now'
-            ).strftime('%Y-%m-%d %H:%M:%S')
-            
-            kuantitas = random.randint(1, 5)
-            sku, id_produk = random.choice(varian_produk)
-            
-            orders.append((
-                id_alamat, email, status_order, metode_pembayaran, 
-                metode_pengiriman, catatan, waktu_pemesanan, kuantitas, sku
-            ))
-        
-        # Insert orders dan dapatkan ID
-        for order in orders:
+            # Insert order
             cursor.execute("""
-                INSERT INTO Orders (
-                    id_alamat, email, status_order, metode_pembayaran, 
-                    metode_pengiriman, catatan, waktu_pemesanan, kuantitas, sku
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, order)
+                INSERT INTO Orders 
+                (id_alamat, id_user, status_order, metode_pembayaran, metode_pengiriman, catatan) 
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (id_alamat, buyer_id, status_order, metode_pembayaran, metode_pengiriman, catatan))
+            
             order_id = cursor.lastrowid
             
-            # Tambahkan ke inst_produk
-            inst_produk.append((order_id, id_produk))
+            # Tambahkan 1-3 produk ke order
+            num_products = random.randint(1, 3)
+            product_choices = random.sample(list(produk_ids.keys()), min(num_products, len(produk_ids)))
+            
+            for product_id in product_choices:
+                if "varians" in produk_ids[product_id] and produk_ids[product_id]["varians"]:
+                    varian = random.choice(produk_ids[product_id]["varians"])
+                    kuantitas = random.randint(1, 5)
+                    
+                    inst_produk.append((order_id, product_id, varian["sku"], kuantitas))
         
-        # Insert inst_produk
+        # Insert instproduk
         if inst_produk:
             cursor.executemany(
-                "INSERT INTO InstProduk (id_order, id_produk) VALUES (%s, %s)",
+                """INSERT INTO InstProduk 
+                (id_order, id_produk, sku, kuantitas) 
+                VALUES (%s, %s, %s, %s)""",
                 inst_produk
             )
         
@@ -439,12 +507,13 @@ def main():
         
         # Urutan seeding penting karena foreign key constraints
         seed_users(connection)
+        seed_buyers_and_sellers(connection)
         seed_pertemanan(connection)
         seed_inst_telp(connection)
-        seed_alamat(connection)
-        seed_produk_dan_varian(connection)
-        seed_keranjang_dan_wishlist(connection)
-        seed_orders(connection)
+        alamat_utama = seed_alamat(connection)
+        produk_ids = seed_produk_dan_varian(connection)
+        seed_keranjang_dan_wishlist(connection, produk_ids)
+        seed_orders(connection, produk_ids, alamat_utama)
         
         print("\n🎉 Database seeding berhasil diselesaikan!")
     except Error as e:
