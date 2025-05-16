@@ -1,6 +1,12 @@
 -- schema.sql
 
+CREATE DATABASE bustbuy4;
+
+USE bustbuy4;
+
 -- tabel User (parent dari Buyer dan Seller)
+
+-- min 100
 CREATE TABLE IF NOT EXISTS `User` (
     id_user INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
 
@@ -12,6 +18,7 @@ CREATE TABLE IF NOT EXISTS `User` (
     tipe ENUM('Buyer', 'Seller') DEFAULT 'Buyer'
 );
 
+-- min 50
 CREATE TABLE IF NOT EXISTS Pertemanan(
     id_user INT NOT NULL,
     id_user_teman INT NOT NULL,
@@ -25,6 +32,7 @@ CREATE TABLE IF NOT EXISTS Pertemanan(
         ON UPDATE CASCADE
 );
 
+-- min 50
 CREATE TABLE IF NOT EXISTS Seller(
     id_user INT NOT NULL PRIMARY KEY,
     ktp VARCHAR(255) NOT NULL,
@@ -36,6 +44,7 @@ CREATE TABLE IF NOT EXISTS Seller(
         ON UPDATE CASCADE
 );
 
+-- min 50
 CREATE TABLE IF NOT EXISTS InstTelp(
     id_user INT NOT NULL,
     nomor_telpon VARCHAR(20) NOT NULL,
@@ -46,6 +55,7 @@ CREATE TABLE IF NOT EXISTS InstTelp(
         ON UPDATE CASCADE
 );
 
+-- min 50
 CREATE TABLE IF NOT EXISTS Buyer(
     id_user INT NOT NULL PRIMARY KEY,
     FOREIGN KEY (id_user) REFERENCES `User`(id_user)
@@ -53,6 +63,7 @@ CREATE TABLE IF NOT EXISTS Buyer(
         ON UPDATE CASCADE
 );
 
+-- min 50
 CREATE TABLE IF NOT EXISTS Produk(
     id_produk INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     nama VARCHAR(255) NOT NULL,
@@ -64,6 +75,7 @@ CREATE TABLE IF NOT EXISTS Produk(
         ON UPDATE CASCADE
 );
 
+-- min 50
 CREATE TABLE IF NOT EXISTS VarianProduk(
     sku VARCHAR(255) NOT NULL,
     id_produk INT NOT NULL,
@@ -78,6 +90,7 @@ CREATE TABLE IF NOT EXISTS VarianProduk(
         ON UPDATE CASCADE
 );
 
+-- min 150 ???
 CREATE TABLE IF NOT EXISTS Keranjang(
     id_user INT NOT NULL,
     sku VARCHAR(255) NOT NULL,
@@ -98,6 +111,7 @@ CREATE TABLE IF NOT EXISTS Keranjang(
         ON UPDATE CASCADE
 );
 
+-- min 100
 CREATE TABLE IF NOT EXISTS Wishlist(
     -- ini sementara, blm fix masalah PK
     id_user INT NOT NULL,
@@ -113,6 +127,7 @@ CREATE TABLE IF NOT EXISTS Wishlist(
         ON UPDATE CASCADE
 );
 
+-- min 50
 CREATE TABLE IF NOT EXISTS Alamat(
     id_user INT NOT NULL,
     id_alamat INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
@@ -126,6 +141,7 @@ CREATE TABLE IF NOT EXISTS Alamat(
         ON UPDATE CASCADE 
 );
 
+-- min 100
 CREATE TABLE IF NOT EXISTS Orders(
     id_order INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     id_alamat INT NOT NULL,
@@ -147,6 +163,7 @@ CREATE TABLE IF NOT EXISTS Orders(
 
 );
 
+-- min 150??
 CREATE TABLE IF NOT EXISTS InstProduk(
     id_order INT NOT NULL,
     id_produk INT NOT NULL,
@@ -167,7 +184,7 @@ CREATE TABLE IF NOT EXISTS InstProduk(
         ON UPDATE CASCADE
 );
 
-
+-- min 50
 CREATE TABLE IF NOT EXISTS InstTag(
     id_produk INT NOT NULL,
     tag VARCHAR(255) NOT NULL,
@@ -179,6 +196,7 @@ CREATE TABLE IF NOT EXISTS InstTag(
         ON UPDATE CASCADE
 );
 
+-- min 50
 CREATE TABLE IF NOT EXISTS InstGambar(
     id_produk INT NOT NULL,
     gambar VARCHAR(255) NOT NULL,
