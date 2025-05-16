@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS User (
     password_hash VARCHAR(255) NOT NULL,
     nama_panjang VARCHAR(255) NOT NULL,
     tanggal_lahir DATE,
+    no_telp VARCHAR(20) NOT NULL,
     foto_profil VARCHAR(255),
     tipe ENUM('Buyer', 'Seller') DEFAULT 'Buyer'
 );
@@ -32,17 +33,6 @@ CREATE TABLE IF NOT EXISTS Seller (
     ktp VARCHAR(255) NOT NULL,
     foto_diri VARCHAR(255) NOT NULL,
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
-
-    FOREIGN KEY (id_user) REFERENCES User(id_user)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS InstTelp (
-    id_user INT NOT NULL,
-    nomor_telpon VARCHAR(20) NOT NULL,
-
-    PRIMARY KEY (id_user, nomor_telpon),
 
     FOREIGN KEY (id_user) REFERENCES User(id_user)
         ON DELETE CASCADE
