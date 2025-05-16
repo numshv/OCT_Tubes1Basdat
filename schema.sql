@@ -187,4 +187,4 @@ CREATE TABLE IF NOT EXISTS Ulasan (
     FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
         ON DELETE CASCADE
         ON UPDATE CASCADE
-)
+);
