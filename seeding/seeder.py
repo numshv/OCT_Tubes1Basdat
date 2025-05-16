@@ -15,9 +15,9 @@ def create_connection():
     """Membuat koneksi ke database MariaDB"""
     try:
         connection = mysql.connector.connect(
-            host = os.getenv('DB_HOST', 'localhost'),
-            user = os.getenv('DB_USER'),
-            password = os.getenv('DB_PASSWORD'),
+            host = 'localhost',
+            user = 'root',
+            password = 'indah00',
             database = 'bustbuy'
         )
         return connection
@@ -503,11 +503,11 @@ def seed_orders(connection, produk_ids, alamat_utama, count=200):
         
         # Updated to match new ENUM values in schema
         status_options = [
-            'belum dibayar', 
-            'disiapkan', 
-            'dikirim', 
-            'sampai', 
-            'dibatalkan'
+            'pesanan belum dibayar', 
+            'pesanan sedang disiapkan', 
+            'pesanan sedang dikirim', 
+            'pesanan sampai', 
+            'pesanan dibatalkan'
         ]
         payment_methods = ['Transfer Bank', 'Kartu Kredit', 'OVO', 'Gopay', 'Dana', 'COD']
         shipping_methods = ['JNE', 'J&T', 'SiCepat', 'Ninja Express', 'AnterAja']
@@ -553,7 +553,7 @@ def seed_orders(connection, produk_ids, alamat_utama, count=200):
                     inst_produk.append((order_id, product_id, varian["sku"], kuantitas))
                     
                     # Add reviews for completed orders
-                    if status_order == 'sampai' and random.random() > 0.3:  # 70% chance of review for completed orders
+                    if status_order == 'pesanan sampai' and random.random() > 0.3:  # 70% chance of review for completed orders
                         nilai = random.randint(1, 5)
                         komentar = fake.paragraph() if random.random() > 0.5 else None
                         ulasan.append((order_id, product_id, nilai, komentar))
