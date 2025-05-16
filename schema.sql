@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS `User` (
 CREATE TABLE IF NOT EXISTS Pertemanan(
     id_user INT NOT NULL,
     id_user_teman INT NOT NULL,
-    PRIMARY KEY (id_user, id_user_teman)
+    PRIMARY KEY (id_user, id_user_teman),
 
     FOREIGN KEY (id_user) REFERENCES `User`(id_user)
         ON DELETE CASCADE
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS Seller(
 );
 
 CREATE TABLE IF NOT EXISTS InstTelp(
-    id_user INT NOT NULL PRIMARY KEY,
+    id_user INT NOT NULL,
     nomor_telpon VARCHAR(20) NOT NULL,
     PRIMARY KEY (id_user, nomor_telpon),
 
