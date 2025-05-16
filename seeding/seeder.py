@@ -35,9 +35,9 @@ def seed_users(connection, count=50):
     sellers = []
     
     for i in range(count):
-        email = f"{nama_panjang}{random.randint(1,999)}@bustbuy.id"
         password_hash = fake.password()
         nama_panjang = fake.unique.name()
+        email = f"{nama_panjang}{random.randint(1,999)}@bustbuy.id"
         tanggal_lahir = fake.date_of_birth(minimum_age=18, maximum_age=60)
         foto_profil = f"profile_{i+1}.jpg"
         tipe = "Seller" if i % 5 == 0 else "Buyer"  # 20% menjadi Seller
