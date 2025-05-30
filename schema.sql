@@ -5,13 +5,16 @@ USE bustbuy;
 -- tabel User (parent dari Buyer dan Seller)
 CREATE TABLE IF NOT EXISTS User (
     id_user INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE CHECK (email LIKE '%@%.%'),
     password_hash VARCHAR(255) NOT NULL,
     nama_panjang VARCHAR(255) NOT NULL,
     tanggal_lahir DATE,
     no_telp VARCHAR(20) NOT NULL,
     foto_profil VARCHAR(255),
-    tipe ENUM('Buyer', 'Seller') DEFAULT 'Buyer'
+    tipe ENUM('Buyer', 'Seller') DEFAULT 'Buyer',
+
+    CHECK (no_telp REGEXP '^[0-9]{8,15}$'),
+    CHECK (TRIM(nama_panjang) <> '')
 );
 
 CREATE TABLE IF NOT EXISTS Pertemanan (
@@ -55,7 +58,9 @@ CREATE TABLE IF NOT EXISTS Produk (
 
     FOREIGN KEY (id_seller) REFERENCES Seller(id_user)
         ON DELETE CASCADE
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+    
+    CHECK (TRIM(nama) <> '')
 );
 
 CREATE TABLE IF NOT EXISTS VarianProduk (
@@ -69,7 +74,9 @@ CREATE TABLE IF NOT EXISTS VarianProduk (
 
     FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
         ON DELETE CASCADE
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+    
+    CHECK (TRIM(nama) <> '')
 );
 
 CREATE TABLE IF NOT EXISTS Keranjang (
@@ -84,7 +91,9 @@ CREATE TABLE IF NOT EXISTS Keranjang (
         ON UPDATE CASCADE,
     FOREIGN KEY (sku, id_produk) REFERENCES VarianProduk(sku, id_produk)
         ON DELETE CASCADE
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+
+    CHECK (kuantitas >= 1)
 );
 
 CREATE TABLE IF NOT EXISTS Wishlist (
@@ -112,6 +121,10 @@ CREATE TABLE IF NOT EXISTS Alamat (
     FOREIGN KEY (id_user) REFERENCES Buyer(id_user)
         ON DELETE CASCADE
         ON UPDATE CASCADE 
+    
+    CHECK (TRIM(jalan) <> ''),
+    CHECK (TRIM(kota) <> ''),
+    CHECK (TRIM(provinsi) <> '')
 );
 
 CREATE TABLE IF NOT EXISTS Orders (
@@ -160,7 +173,9 @@ CREATE TABLE IF NOT EXISTS InstTag (
 
     FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
         ON DELETE CASCADE
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+    
+    CHECK (TRIM(tag) <> '')
 );
 
 CREATE TABLE IF NOT EXISTS InstGambar (
@@ -171,7 +186,9 @@ CREATE TABLE IF NOT EXISTS InstGambar (
 
     FOREIGN KEY (id_produk) REFERENCES Produk(id_produk)
         ON DELETE CASCADE
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+    
+    CHECK (TRIM(gambar) <> '')
 );
 
 CREATE TABLE IF NOT EXISTS Ulasan (
