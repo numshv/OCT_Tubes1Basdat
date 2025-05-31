@@ -1,11 +1,12 @@
 -- schema.sql
+DROP DATABASE bustbuy12;
 CREATE DATABASE IF NOT EXISTS bustbuy12;
 USE bustbuy12;
 
 -- tabel User (parent dari Buyer dan Seller)
 CREATE TABLE IF NOT EXISTS `User` (
     id_user INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
-    email VARCHAR(255) NOT NULL UNIQUE CHECK (email LIKE '%@%.%'),
+    email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     nama_panjang VARCHAR(255) NOT NULL,
     tanggal_lahir DATE NOT NULL,
@@ -14,7 +15,8 @@ CREATE TABLE IF NOT EXISTS `User` (
     tipe ENUM('Buyer', 'Seller') DEFAULT 'Buyer' NOT NULL,
 
     CHECK (no_telp REGEXP '^[0-9]{8,15}$'),
-    CHECK (TRIM(nama_panjang) <> '')
+    CHECK (TRIM(nama_panjang) <> ''),
+    CHECK (email REGEXP '^[^@\\s]+@[^@\\s]+\\.com$')
 );
 
 CREATE TABLE IF NOT EXISTS Pertemanan (
@@ -43,6 +45,35 @@ CREATE TABLE IF NOT EXISTS Seller (
     
     CHECK (ktp <> foto_diri)
 );
+
+DELIMITER //
+CREATE TRIGGER check_seller_verification_transition
+BEFORE UPDATE ON Seller
+FOR EACH ROW
+BEGIN
+    IF OLD.is_verified = TRUE AND NEW.is_verified = FALSE THEN SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Status seller tidak dapat berubah dari verified menjadi tidak verified';
+    END IF;
+END;//
+DELIMITER ;
+
+DELIMITER //
+
+CREATE TRIGGER seller_verification_check
+BEFORE UPDATE ON Seller
+FOR EACH ROW
+BEGIN
+    IF NEW.is_verified = TRUE AND (NEW.ktp IS NULL OR 
+    TRIM(NEW.ktp) = '' OR NEW.foto_diri IS NULL OR 
+    TRIM(NEW.foto_diri) = '') THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tidak bisa memverifikasi seller 
+        sebelum KTP dan foto diri diunggah.';
+    END IF;
+END;
+//
+
+DELIMITER ;
 
 CREATE TABLE IF NOT EXISTS Buyer (
     id_user INT NOT NULL PRIMARY KEY,
@@ -172,6 +203,45 @@ CREATE TABLE IF NOT EXISTS Orders (
     FOREIGN KEY (id_alamat) REFERENCES Alamat(id_alamat)
         ON UPDATE CASCADE
 );
+
+DELIMITER //
+CREATE TRIGGER check_status_order_transition
+BEFORE UPDATE ON Orders
+FOR EACH ROW
+BEGIN
+    DECLARE msg VARCHAR(255);
+
+
+    IF OLD.status_order = 'belum dibayar' AND NEW.status_order NOT IN ('disiapkan', 'dibatalkan') THEN
+        SET msg = 'Transisi dari "belum dibayar" hanya boleh ke "disiapkan" atau "dibatalkan"';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = msg;
+    END IF;
+
+
+    IF OLD.status_order = 'disiapkan' AND NEW.status_order NOT IN ('dikirim', 'dibatalkan') THEN
+        SET msg = 'Transisi dari "disiapkan" hanya boleh ke "dikirim" atau "dibatalkan"';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = msg;
+    END IF;
+
+
+    IF OLD.status_order = 'dikirim' AND NEW.status_order NOT IN ('sampai', 'dibatalkan') THEN
+        SET msg = 'Transisi dari "dikirim" hanya boleh ke "sampai" atau "dibatalkan"';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = msg;
+    END IF;
+
+
+    IF OLD.status_order = 'sampai' AND NEW.status_order != 'sampai' THEN
+        SET msg = 'Order yang sudah "sampai" tidak bisa diubah';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = msg;
+    END IF;
+
+
+    IF OLD.status_order = 'dibatalkan' AND NEW.status_order != 'dibatalkan' THEN
+        SET msg = 'Order yang "dibatalkan" tidak bisa diubah';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = msg;
+    END IF;
+END;//
+DELIMITER ;
 
 CREATE TABLE IF NOT EXISTS InstProduk (
     id_order INT NOT NULL,

@@ -17,7 +17,7 @@ def create_connection():
         connection = mysql.connector.connect(
             host = 'localhost',
             user = 'root',
-            password = 'n0um1sy1fa',
+            password = 'hakuryuutoranosuke97',
             database = 'bustbuy12'  # Updated to match schema
         )
         return connection
@@ -48,7 +48,7 @@ def seed_users(connection):
     for i in range(total_users):
         nama_panjang = fake.unique.name()
         # Ensure email follows the CHECK constraint pattern
-        email = f"{nama_panjang.split()[0].lower()}{random.randint(1,999)}@bustbuy.id"
+        email = f"{nama_panjang.split()[0].lower()}{random.randint(1,999)}@bustbuy.com"
         password_hash = fake.password()
         tanggal_lahir = fake.date_of_birth(minimum_age=18, maximum_age=60)
         # Ensure phone number follows regex pattern ^[0-9]{8,15}$
