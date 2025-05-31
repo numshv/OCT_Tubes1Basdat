@@ -1,5 +1,4 @@
 -- schema.sql
-DROP DATABASE bustbuy12;
 CREATE DATABASE IF NOT EXISTS bustbuy12;
 USE bustbuy12;
 
