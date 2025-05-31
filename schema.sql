@@ -17,6 +17,32 @@ CREATE TABLE IF NOT EXISTS `User` (
     CHECK (TRIM(nama_panjang) <> '')
 );
 
+DELIMITER //
+
+CREATE TRIGGER user_age_insert_check
+BEFORE INSERT ON User
+FOR EACH ROW
+BEGIN
+    -- Menghitung usia berdasarkan tanggal lahir yang baru dan tanggal saat ini
+    -- Jika tanggal lahir BARU lebih dari 17 tahun ke belakang dari tanggal hari ini, berarti usia < 17 tahun
+    IF NEW.tanggal_lahir > DATE_SUB(CURDATE(), INTERVAL 17 YEAR) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Usia pengguna harus minimal 17 tahun.';
+    END IF;
+END;
+//
+
+CREATE TRIGGER user_age_update_check
+BEFORE UPDATE ON User
+FOR EACH ROW
+BEGIN
+    IF NEW.tanggal_lahir > DATE_SUB(CURDATE(), INTERVAL 17 YEAR) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Usia pengguna harus minimal 17 tahun.';
+    END IF;
+END;
+//
+
+DELIMITER ;
+
 CREATE TABLE IF NOT EXISTS Pertemanan (
     id_user INT NOT NULL,
     id_user_teman INT NOT NULL,
