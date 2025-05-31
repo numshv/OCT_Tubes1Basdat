@@ -261,7 +261,11 @@ def seed_produk_dan_varian(connection, count=100):
             'Elektronik': ['Smartphone', 'Laptop', 'Kamera', 'Headphone', 'Smartwatch'],
             'Fashion': ['Kaos', 'Celana', 'Jaket', 'Sepatu', 'Tas'],
             'Rumah Tangga': ['Furniture', 'Dekorasi', 'Perlengkapan Dapur', 'Alat Kebersihan'],
-            'Hobi': ['Alat Musik', 'Buku', 'Alat Lukis', 'Peralatan Olahraga']
+            'Hobi': ['Alat Musik', 'Buku', 'Alat Lukis', 'Peralatan Olahraga'],
+            'Makanan': ['Alat Musik', 'Buku', 'Alat Lukis', 'Peralatan Olahraga'],
+            'Kosmetik': ['Alat Musik', 'Buku', 'Alat Lukis', 'Peralatan Olahraga'],
+            'Stationery': ['Alat Musik', 'Buku', 'Alat Lukis', 'Peralatan Olahraga'],
+            'Keburuhan Sehari-Hari': ['Alat Musik', 'Buku', 'Alat Lukis', 'Peralatan Olahraga'],
         }
         
         warna = ['Merah', 'Biru', 'Hijau', 'Kuning', 'Hitam', 'Putih', 'Abu-abu', 'Coklat', 'Ungu', 'Orange']

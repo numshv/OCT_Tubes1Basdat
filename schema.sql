@@ -1,6 +1,6 @@
 -- schema.sql
-CREATE DATABASE IF NOT EXISTS bustbuy12;
-USE bustbuy12;
+CREATE DATABASE IF NOT EXISTS bustbuy15;
+USE bustbuy15;
 
 -- tabel User (parent dari Buyer dan Seller)
 CREATE TABLE IF NOT EXISTS `User` (
@@ -338,4 +338,71 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Ulasan hanya dapat dibuat untuk produk yang ada dalam order';
     END IF;
 END//
+DELIMITER ;
+
+DELIMITER //
+
+CREATE TRIGGER pertemanan_self_check_insert
+BEFORE INSERT ON Pertemanan
+FOR EACH ROW
+BEGIN
+    IF NEW.id_user = NEW.id_user_teman THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User tidak dapat berteman dengan dirinya sendiri';
+    END IF;
+END;
+//
+
+DELIMITER ;
+
+DELIMITER //
+
+CREATE TRIGGER pertemanan_self_check_update
+BEFORE UPDATE ON Pertemanan
+FOR EACH ROW
+BEGIN
+    IF NEW.id_user = NEW.id_user_teman THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User tidak dapat berteman dengan dirinya sendiri';
+    END IF;
+END;
+//
+
+DELIMITER ;
+
+-- Trigger untuk validasi Varian Produk: nama_varian harus unik untuk setiap produk
+DELIMITER //
+
+CREATE TRIGGER varian_produk_unique_check_insert
+BEFORE INSERT ON VarianProduk
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM VarianProduk 
+        WHERE id_produk = NEW.id_produk 
+        AND nama_varian = NEW.nama_varian 
+        AND sku != NEW.sku
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Nama varian harus unik untuk setiap produk';
+    END IF;
+END;
+//
+
+DELIMITER ;
+
+DELIMITER //
+
+CREATE TRIGGER varian_produk_unique_check_update
+BEFORE UPDATE ON VarianProduk
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM VarianProduk 
+        WHERE id_produk = NEW.id_produk 
+        AND nama_varian = NEW.nama_varian 
+        AND sku != NEW.sku
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Nama varian harus unik untuk setiap produk';
+    END IF;
+END;
+//
+
 DELIMITER ;
