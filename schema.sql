@@ -1,6 +1,6 @@
 -- schema.sql
-CREATE DATABASE IF NOT EXISTS bustbuy;
-USE bustbuy;
+CREATE DATABASE IF NOT EXISTS bustbuy12;
+USE bustbuy12;
 
 -- tabel User (parent dari Buyer dan Seller)
 CREATE TABLE IF NOT EXISTS `User` (
@@ -8,10 +8,10 @@ CREATE TABLE IF NOT EXISTS `User` (
     email VARCHAR(255) NOT NULL UNIQUE CHECK (email LIKE '%@%.%'),
     password_hash VARCHAR(255) NOT NULL,
     nama_panjang VARCHAR(255) NOT NULL,
-    tanggal_lahir DATE,
+    tanggal_lahir DATE NOT NULL,
     no_telp VARCHAR(20) NOT NULL,
     foto_profil VARCHAR(255),
-    tipe ENUM('Buyer', 'Seller') DEFAULT 'Buyer',
+    tipe ENUM('Buyer', 'Seller') DEFAULT 'Buyer' NOT NULL,
 
     CHECK (no_telp REGEXP '^[0-9]{8,15}$'),
     CHECK (TRIM(nama_panjang) <> '')
@@ -35,11 +35,13 @@ CREATE TABLE IF NOT EXISTS Seller (
     id_user INT NOT NULL PRIMARY KEY,
     ktp VARCHAR(255) NOT NULL,
     foto_diri VARCHAR(255) NOT NULL,
-    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE NOT NULL,
 
     FOREIGN KEY (id_user) REFERENCES `User`(id_user)
         ON DELETE CASCADE
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+    
+    CHECK (ktp <> foto_diri)
 );
 
 CREATE TABLE IF NOT EXISTS Buyer (
@@ -77,7 +79,8 @@ CREATE TABLE IF NOT EXISTS VarianProduk (
         ON DELETE CASCADE
         ON UPDATE CASCADE,
     
-    CHECK (TRIM(nama) <> '')
+    CHECK (TRIM(nama_varian) <> ''),
+    CHECK (TRIM(sku) <> '')
 );
 
 CREATE TABLE IF NOT EXISTS Keranjang (
@@ -94,7 +97,8 @@ CREATE TABLE IF NOT EXISTS Keranjang (
         ON DELETE CASCADE
         ON UPDATE CASCADE,
 
-    CHECK (kuantitas >= 1)
+    CHECK (kuantitas >= 1),
+    UNIQUE(id_user, id_produk, sku)
 );
 
 CREATE TABLE IF NOT EXISTS Wishlist (
@@ -121,7 +125,7 @@ CREATE TABLE IF NOT EXISTS Alamat (
 
     FOREIGN KEY (id_user) REFERENCES Buyer(id_user)
         ON DELETE CASCADE
-        ON UPDATE CASCADE 
+        ON UPDATE CASCADE,
     
     CHECK (TRIM(jalan) <> ''),
     CHECK (TRIM(kota) <> ''),
@@ -240,12 +244,3 @@ BEGIN
     END IF;
 END//
 DELIMITER ;
-
-CREATE OR REPLACE VIEW TrendingProducts AS
-SELECT 
-    tag,
-    COUNT(*) AS jumlah_produk
-FROM InstTag
-GROUP BY tag
-ORDER BY jumlah_produk DESC
-LIMIT 5;
