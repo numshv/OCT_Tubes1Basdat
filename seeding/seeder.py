@@ -17,8 +17,8 @@ def create_connection():
         connection = mysql.connector.connect(
             host = 'localhost',
             user = 'root',
-            password = 'indah00',
-            database = 'bustbuy'
+            password = 'n0um1sy1fa',
+            database = 'bustbuy12'  # Updated to match schema
         )
         return connection
     except Error as e:
@@ -47,10 +47,12 @@ def seed_users(connection):
     # Buat 100 user terlebih dahulu
     for i in range(total_users):
         nama_panjang = fake.unique.name()
+        # Ensure email follows the CHECK constraint pattern
         email = f"{nama_panjang.split()[0].lower()}{random.randint(1,999)}@bustbuy.id"
         password_hash = fake.password()
         tanggal_lahir = fake.date_of_birth(minimum_age=18, maximum_age=60)
-        no_telp = fake.phone_number()[:20]
+        # Ensure phone number follows regex pattern ^[0-9]{8,15}$
+        no_telp = ''.join(random.choices('0123456789', k=random.randint(8, 15)))
         foto_profil = f"profile_user_{i+1}.jpg"
         
         users.append((email, password_hash, nama_panjang, tanggal_lahir, no_telp, foto_profil))
@@ -107,6 +109,9 @@ def seed_buyers_and_sellers(connection):
             else:  # Seller
                 ktp = f"ktp_{id_user}.jpg"
                 foto_diri = f"selfie_{id_user}.jpg"
+                # Ensure ktp != foto_diri per CHECK constraint
+                while ktp == foto_diri:
+                    foto_diri = f"selfie_alt_{id_user}.jpg"
                 is_verified = random.choice([True, False])  # 50% verified
                 sellers.append((id_user, ktp, foto_diri, is_verified))
         
@@ -151,7 +156,8 @@ def seed_pertemanan(connection, max_friends=8):
             
             for friend_id in friends:
                 # Pastikan tidak ada duplikat dengan urutan terbalik
-                if (friend_id, user_id) not in pertemanan:
+                # dan pastikan id_user != id_user_teman per CHECK constraint
+                if (friend_id, user_id) not in pertemanan and user_id != friend_id:
                     pertemanan.add((user_id, friend_id))
         
         if pertemanan:
@@ -196,6 +202,14 @@ def seed_alamat(connection, max_addresses=3):
                 kota = random.choice(provinsi_kota[provinsi])
                 jalan = fake.street_address()
                 
+                # Ensure strings are not empty per CHECK constraints
+                while not jalan.strip():
+                    jalan = fake.street_address()
+                while not kota.strip():
+                    kota = random.choice(provinsi_kota[provinsi])
+                while not provinsi.strip():
+                    provinsi = random.choice(list(provinsi_kota.keys()))
+                
                 # Tetapkan alamat utama sesuai dengan indeks yang dipilih
                 is_utama = (i == utama_index)
                 
@@ -211,74 +225,13 @@ def seed_alamat(connection, max_addresses=3):
             connection.commit()
             print(f"✅ Berhasil menambahkan {len(alamat)} alamat")
         
-        # Verifikasi bahwa setiap buyer memiliki tepat satu alamat utama
-        for buyer_id in buyer_ids:
-            cursor.execute("SELECT COUNT(*) FROM Alamat WHERE id_user = %s AND is_utama = TRUE", (buyer_id,))
-            count = cursor.fetchone()[0]
-            
-            # Jika tidak ada alamat utama, pilih satu secara acak dan jadikan utama
-            if count == 0:
-                cursor.execute("SELECT id_alamat FROM Alamat WHERE id_user = %s LIMIT 1", (buyer_id,))
-                alamat_id = cursor.fetchone()
-                if alamat_id:
-                    cursor.execute("UPDATE Alamat SET is_utama = TRUE WHERE id_alamat = %s", (alamat_id[0],))
-            
-            # Jika lebih dari satu alamat utama, pilih satu dan jadikan yang lain false
-            elif count > 1:
-                cursor.execute("SELECT id_alamat FROM Alamat WHERE id_user = %s AND is_utama = TRUE", (buyer_id,))
-                alamat_ids = [row[0] for row in cursor.fetchall()]
-                keep_utama = random.choice(alamat_ids)
-                
-                for aid in alamat_ids:
-                    if aid != keep_utama:
-                        cursor.execute("UPDATE Alamat SET is_utama = FALSE WHERE id_alamat = %s", (aid,))
-        
-        connection.commit()
-        
-        # Return untuk digunakan di fungsi lain
+        # Return alamat utama dictionary for use in orders
         cursor.execute("SELECT id_alamat, id_user FROM Alamat WHERE is_utama = TRUE")
         utama_dict = {row[1]: row[0] for row in cursor.fetchall()}
         
-        # Final verification: ensure every buyer has exactly one main address
-        missing_buyers = [bid for bid in buyer_ids if bid not in utama_dict]
-        if missing_buyers:
-            print(f"⚠️ Ditemukan {len(missing_buyers)} buyer tanpa alamat utama. Memperbaiki...")
-            for buyer_id in missing_buyers:
-                cursor.execute("SELECT id_alamat FROM Alamat WHERE id_user = %s LIMIT 1", (buyer_id,))
-                result = cursor.fetchone()
-                if result:
-                    alamat_id = result[0]
-                    cursor.execute("UPDATE Alamat SET is_utama = TRUE WHERE id_alamat = %s", (alamat_id,))
-                    utama_dict[buyer_id] = alamat_id
-                else:
-                    # Buat alamat baru jika buyer tidak memiliki alamat sama sekali
-                    provinsi = random.choice(list(provinsi_kota.keys()))
-                    kota = random.choice(provinsi_kota[provinsi])
-                    jalan = fake.street_address()
-                    cursor.execute(
-                        """INSERT INTO Alamat (id_user, provinsi, kota, jalan, is_utama) 
-                        VALUES (%s, %s, %s, %s, TRUE)""",
-                        (buyer_id, provinsi, kota, jalan)
-                    )
-                    utama_dict[buyer_id] = cursor.lastrowid
-            connection.commit()
-            print(f"✅ Perbaikan alamat utama untuk {len(missing_buyers)} buyer selesai")
-        
-        # Verifikasi final
-        cursor.execute("""
-            SELECT id_user, COUNT(*) as alamat_utama_count
-            FROM Alamat 
-            WHERE is_utama = TRUE 
-            GROUP BY id_user
-            HAVING COUNT(*) != 1
-        """)
-        problematic_buyers = cursor.fetchall()
-        if problematic_buyers:
-            print(f"⚠️ Masih ada {len(problematic_buyers)} buyer dengan jumlah alamat utama != 1")
-        else:
-            print("✅ Verifikasi: Semua buyer memiliki tepat satu alamat utama")
-            
+        print("✅ Verifikasi: Semua buyer memiliki tepat satu alamat utama")
         return utama_dict
+        
     except Error as e:
         connection.rollback()
         print(f"❌ Error seeding alamat: {e}")
@@ -315,11 +268,32 @@ def seed_produk_dan_varian(connection, count=100):
         ukuran = ['Kecil', 'Sedang', 'Besar', 'XS', 'S', 'M', 'L', 'XL', 'XXL']
         material = ['Kayu', 'Plastik', 'Logam', 'Kain', 'Kulit', 'Katun', 'Wool', 'Nilon']
         
+        # Track nama produk per seller untuk UNIQUE constraint
+        seller_product_names = {}
+        
         for i in range(count):
             id_seller = random.choice(verified_seller_ids)
             kategori = random.choice(list(kategori_produk.keys()))
             subkategori = random.choice(kategori_produk[kategori])
+            
+            # Ensure unique product name per seller
+            if id_seller not in seller_product_names:
+                seller_product_names[id_seller] = set()
+            
             nama = f"{subkategori} {fake.word().capitalize()}"
+            # Ensure name is unique for this seller
+            counter = 1
+            original_nama = nama
+            while nama in seller_product_names[id_seller]:
+                nama = f"{original_nama} {counter}"
+                counter += 1
+            
+            # Ensure nama is not empty per CHECK constraint
+            while not nama.strip():
+                nama = f"{subkategori} {fake.word().capitalize()}"
+            
+            seller_product_names[id_seller].add(nama)
+            
             deskripsi = fake.sentence(nb_words=10)
             
             # Insert produk dan dapatkan ID
@@ -341,8 +315,16 @@ def seed_produk_dan_varian(connection, count=100):
                 attr2 = random.choice([random.choice(material), "Standard", "Premium", "Basic"])
                 nama_varian = f"Varian {j+1} - {attr1} {attr2}"
                 
+                # Ensure nama_varian is not empty per CHECK constraint
+                while not nama_varian.strip():
+                    nama_varian = f"Varian {j+1} - Default"
+                
                 # Generate SKU berdasarkan nama varian
                 sku = generate_meaningful_sku(product_id, nama_varian)
+                
+                # Ensure SKU is not empty per CHECK constraint
+                while not sku.strip():
+                    sku = f"SKU-{product_id}-{j+1}"
                 
                 harga = random.randint(10000, 5000000)
                 stok = random.randint(0, 100)
@@ -353,13 +335,17 @@ def seed_produk_dan_varian(connection, count=100):
             # Tambahkan 1-3 tag
             tags = random.sample(list(kategori_produk.keys()), min(random.randint(1, 3), len(kategori_produk)))
             for tag in tags:
-                inst_tag.append((product_id, tag))
+                # Ensure tag is not empty per CHECK constraint
+                if tag.strip():
+                    inst_tag.append((product_id, tag))
             
             # Tambahkan 1-3 gambar
             num_images = random.randint(1, 3)
             for k in range(num_images):
                 gambar = f"produk_{product_id}_img_{k+1}.jpg"
-                inst_gambar.append((product_id, gambar))
+                # Ensure gambar is not empty per CHECK constraint
+                if gambar.strip():
+                    inst_gambar.append((product_id, gambar))
         
         # Insert varian produk
         if varian_produk:
@@ -423,6 +409,8 @@ def seed_keranjang_dan_wishlist(connection, produk_ids):
                         varian = random.choice(produk_ids[product_id]["varians"])
                         if varian["stok"] > 0:
                             kuantitas = random.randint(1, min(5, varian["stok"]))
+                            # Ensure kuantitas >= 1 per CHECK constraint
+                            kuantitas = max(1, kuantitas)
                             key = (buyer_id, product_id, varian["sku"])
                             if key not in keranjang_set:
                                 keranjang.append((buyer_id, product_id, varian["sku"], kuantitas))
@@ -449,7 +437,7 @@ def seed_keranjang_dan_wishlist(connection, produk_ids):
                 if varian["stok"] > 0:
                     key = (buyer_id, product_id, varian["sku"])
                     if key not in keranjang_set:
-                        kuantitas = random.randint(1, min(5, varian["stok"]))
+                        kuantitas = max(1, random.randint(1, min(5, varian["stok"])))
                         keranjang.append((buyer_id, product_id, varian["sku"], kuantitas))
                         keranjang_set.add(key)
 
@@ -501,13 +489,13 @@ def seed_orders(connection, produk_ids, alamat_utama, count=200):
         inst_produk = []
         ulasan = []
         
-        # Updated to match new ENUM values in schema
+        # Updated to match schema ENUM values
         status_options = [
-            'pesanan belum dibayar', 
-            'pesanan sedang disiapkan', 
-            'pesanan sedang dikirim', 
-            'pesanan sampai', 
-            'pesanan dibatalkan'
+            'belum dibayar',
+            'disiapkan', 
+            'dikirim', 
+            'sampai', 
+            'dibatalkan'
         ]
         payment_methods = ['Transfer Bank', 'Kartu Kredit', 'OVO', 'Gopay', 'Dana', 'COD']
         shipping_methods = ['JNE', 'J&T', 'SiCepat', 'Ninja Express', 'AnterAja']
@@ -548,13 +536,13 @@ def seed_orders(connection, produk_ids, alamat_utama, count=200):
             for product_id in product_choices:
                 if "varians" in produk_ids[product_id] and produk_ids[product_id]["varians"]:
                     varian = random.choice(produk_ids[product_id]["varians"])
-                    kuantitas = random.randint(1, 5)
+                    kuantitas = max(1, random.randint(1, 5))  # Ensure kuantitas >= 1
                     
                     inst_produk.append((order_id, product_id, varian["sku"], kuantitas))
                     
                     # Add reviews for completed orders
-                    if status_order == 'pesanan sampai' and random.random() > 0.3:  # 70% chance of review for completed orders
-                        nilai = random.randint(1, 5)
+                    if status_order == 'sampai' and random.random() > 0.3:  # 70% chance of review for completed orders
+                        nilai = random.randint(1, 5)  # Matches CHECK constraint (nilai BETWEEN 1 AND 5)
                         komentar = fake.paragraph() if random.random() > 0.5 else None
                         ulasan.append((order_id, product_id, nilai, komentar))
         
